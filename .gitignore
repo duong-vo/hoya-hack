@@ -1,4 +1,6 @@
 /myVenv/
 *.jpg
 test.py
+requirements.txt
+.env
 test/
