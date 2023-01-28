@@ -3,5 +3,6 @@
 test.py
 requirements.txt
 .env
-test/
 weights/
+*.db
+test/

@@ -8,21 +8,22 @@ import webbrowser
 from vision.preprocessing import Preprocessing
 import vision.ProductIdentification
 from vision.ProductIdentification import ProductDatabase, InferenceModel
+import sqlite3
+import db
+
 
 load_dotenv()
 ID = os.environ.get("id")
 TOKEN = os.environ.get("token")
 print("xxx100", TOKEN)
 
-#create
-
-
 
 LARGE_FONT = ("Verdana", 12)
 SMALL_FONT = ("Verdana", 8)
 
-
+# Camera object
 CAMERA = cv2.VideoCapture(0)
+
 
 class App(tk.Tk):
     def __init__(self, *args, **kwargs):
@@ -84,8 +85,10 @@ class CameraPage(tk.Frame):
                            command= lambda: controller.show_frame("CheckoutPage"))
         next_button.pack()
         
+
+
         # add additional categories
-        side_camera_button = tk.Button(self, text="Add Another Item", font=LARGE_FONT, width=12, height=2,
+        side_camera_button = tk.Button(self, text="Submit Item", font=LARGE_FONT, width=12, height=2,
                            command= lambda: controller.show_frame("SideCameraPage"))
         side_camera_button.pack()
 
@@ -152,19 +155,26 @@ class SideCameraPage(tk.Frame):
                            command= lambda: controller.show_frame("CameraPage"))
         back_button.pack()
 
-        self.item = tk.StringVar()
-        item_text = tk.Label(self, text="Add item*", font=SMALL_FONT)
+        # item name entry
+        self.item, self.price, self.frame = tk.StringVar(), tk.IntVar(), []
+        item_text = tk.Label(self, text="Item*", font=SMALL_FONT)
         item_text.pack()
         item_entry = tk.Entry(self, textvariable=self.item)
         item_entry.pack()
 
+        # item price entry
+        price_text = tk.Label(self, text="Price", font=LARGE_FONT)
+        price_text.pack()
+        price_entry = tk.Entry(self, textvariable=self.price)
+        price_entry.pack()
+
         # button to take a picture
         capture_button = tk.Button(self, text="Capture", font=LARGE_FONT, width=12, height=2,
-                           command=self.capture_frame)
+                           command=self.capture_frame_and_info)
         capture_button.pack()
         self.video = tk.Label(self)
         self.video.pack()
-        self.vid = cv2.VideoCapture(1)
+        self.get_info()
         self.update_frame()
 
     def update_frame(self):
@@ -178,11 +188,34 @@ class SideCameraPage(tk.Frame):
             self.video.configure(image=self.img)
         # Schedule the update_frame function to be called
         # after a delay of 30ms
-        self.after(30, self.update_frame)
+        self.after(10, self.update_frame)
     
-    def capture_frame(self):
+    def capture_frame_and_info(self):
+        # initialize database connection
+        conn = db.connection()
+        cursor = conn.cursor()
+        
+        # fetch the item from the event
         _, frame = CAMERA.read()
+        self.frame = frame
+        print("xxx777.frame_info", frame)
+        
+        self.item = self.item.get()
+        print("xxx777.item_info", self.item)
+        
+        self.price = self.price.get()
+        print("xxx788.item_info", self.price)
+
+        #add item and price to the database
+        cursor.execute("INSERT INTO Items (item, price) VALUES (?, ?)",
+                        (self.item, self.price))
+        conn.commit()
+        
         cv2.imwrite("captured_frame.jpg", frame)
+        conn.close()
+    
+    def get_info(self):
+        print("xxx799, get new item info", self.item, self.frame)
 
  # the checkout  page
  # this page will containt the stripe
@@ -229,7 +262,7 @@ class CheckoutPage(tk.Frame):
         button.pack()
 
         checkout = tk.Button(self, text="Continue To Checkout", font=LARGE_FONT, width=16, height=2,
-                           command= lambda: controller.show_frame("PaymentPage"))
+                             command= lambda: controller.show_frame("PaymentPage"))
         checkout.pack()
 
     # input the user info to register customer
@@ -255,14 +288,12 @@ class CheckoutPage(tk.Frame):
 
         if customer_result.is_success():
             print("xxx200.result", customer_result.body)
+            # get customer_id to create payment
             customer_id = customer_result.body['customer']['id']
             print("xxx300.customer_id", customer_id)
         elif customer_result.is_error():
             print("xxx400.result", customer_result.errors)
-        
-        # get customer_id to create payment
 
-        
         # get the location object to get the locationId
         location_result = client.locations.list_locations()
         if location_result.is_success():
