@@ -124,6 +124,12 @@ class SideCameraPage(tk.Frame):
                            command= lambda: controller.show_frame("CameraPage"))
         back_button.pack()
 
+        self.item = tk.StringVar()
+        item_text = tk.Label(self, text="Add item*", font=SMALL_FONT)
+        item_text.pack()
+        item_entry = tk.Entry(self, textvariable=self.item)
+        item_entry.pack()
+
         # button to take a picture
         capture_button = tk.Button(self, text="Capture", font=LARGE_FONT, width=12, height=2,
                            command=self.capture_frame)
@@ -197,7 +203,7 @@ class CheckoutPage(tk.Frame):
         checkout = tk.Button(self, text="Continue To Checkout", font=LARGE_FONT, width=16, height=2,
                            command= lambda: controller.show_frame("PaymentPage"))
         checkout.pack()
-    
+
     # input the user info to register customer
     def save_customer_info(self):
         first_name_info = self.first_name.get()
@@ -239,7 +245,8 @@ class CheckoutPage(tk.Frame):
         elif location_result.is_error():
             print("xxx402.result", location_result.errors)
 
-# Payment page        
+# Payment page
+# Will redirect to the Square Payment Page 
 class PaymentPage(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
@@ -258,7 +265,8 @@ class PaymentPage(tk.Frame):
                         "location_id": "LVT2MPPHNKY2X"
                         }
                     }
-                )           
+                )
+        # create the url to redirect to the checkout page
         url = ""
         if result.is_success():
             print(result.body)
