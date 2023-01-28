@@ -1,2 +1,0 @@
-tkinter == 8.5.0
-requests
