@@ -5,6 +5,9 @@ from square.client import Client
 from dotenv import load_dotenv
 import os
 import webbrowser
+from vision.preprocessing import Preprocessing
+import vision.ProductIdentification
+from vision.ProductIdentification import ProductDatabase, InferenceModel
 
 load_dotenv()
 ID = os.environ.get("id")
@@ -112,6 +115,31 @@ class CameraPage(tk.Frame):
     def capture_frame(self):
         _, frame = CAMERA.read()
         cv2.imwrite("captured_frame.jpg", frame)
+    
+    def predict_item(img):
+        """List all the items appeared in the images
+
+        Args:
+            img (cv2 image): image of the scanning table
+
+        Returns:
+            List: list of items appeared on the scanning table
+        """
+        preprocessing = Preprocessing(img)
+        obj_img_list = preprocessing.get_obj_img()
+
+        dataset_path = 'dataset'
+        database = ProductDatabase()
+        encode_bucket = database.get_encode_bucket()
+
+        model_path = 'weights/'
+        inference_model = inference_model('weights/', encode_bucket)
+
+        predicted_product_list = []
+        for obj_img in obj_img_list:
+            predicted_product_list.append(inference_model(img))
+        
+        return predicted_product_list
 
 
 class SideCameraPage(tk.Frame):

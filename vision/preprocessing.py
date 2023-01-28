@@ -42,7 +42,7 @@ class Preprocessing:
         
         obj_img = []
         pil_img = Image.fromarray(np.uint8(self.img*255))
-        for i, bbox in enumerate(bboxes):
+        for i, bbox in enumerate(self.bboxes):
             crop = pil_img.crop(bbox[1::-1] + bbox[-1:1:-1])
             obj_img.append(crop)
 

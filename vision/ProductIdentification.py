@@ -19,7 +19,7 @@ DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 dataset_path = 'dataset/'
 class ProductDatabase:
-    def __init__(self, imageFolderDataset, model):
+    def __init__(self, dataset_path, model):
         # self.imageFolderDataset = imageFolderDataset
         # self.model = model
         imageFolderDataset = datasets.ImageFolder(root=dataset_path)
