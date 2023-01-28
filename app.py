@@ -3,13 +3,15 @@ import cv2
 from PIL import ImageTk, Image
 from square.client import Client
 from dotenv import load_dotenv
+import os
 
-ID = load_dotenv("id")
-TOKEN = load_dotenv("token")
-client = Client(
-    access_token=TOKEN,
-    environment='sandbox'
-)
+load_dotenv()
+ID = os.environ.get("id")
+TOKEN = os.environ.get("token")
+print("xxx100", TOKEN)
+
+#create
+
 
 
 LARGE_FONT = ("Verdana", 12)
@@ -144,12 +146,37 @@ class CheckoutPage(tk.Frame):
                            command= lambda: controller.show_frame("WelcomePage"))
         button.pack()
     
+    # input the user info to register customer
     def save_info(self):
         first_name_info = self.first_name.get()
         print("xxx333.received first name", first_name_info)
-        
+        last_name_info = self.last_name.get()
+        print("xxx334.received last name", last_name_info)
+        email_info = self.email.get()
+        print("xxx335.received email", email_info)
+        self.create_customer(first_name_info, last_name_info, email_info)
+    
+    # create customer through square api
+    def create_customer(self, first, last, email):
+        result = client.customers.create_customer(
+            body = {
+                "given_name": first,
+                "family_name": last,
+                "email_address": email
+            }
+        )
+
+        if result.is_success():
+            print("xxx200.result", result.body)
+        elif result.is_error():
+            print("xxx400.result", result.errors)
+
 
 
 if __name__ == "__main__":
+    client = Client (
+                access_token=TOKEN,
+                environment='sandbox'
+            )
     app = App()
     app.mainloop()
