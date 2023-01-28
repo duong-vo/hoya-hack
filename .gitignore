@@ -5,3 +5,4 @@ requirements.txt
 .env
 *.db
 test/
+weights/
