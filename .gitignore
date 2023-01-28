@@ -1,3 +1,4 @@
 /myVenv/
 *.jpg
 test.py
+test/
