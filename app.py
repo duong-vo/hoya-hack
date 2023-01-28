@@ -1,8 +1,19 @@
 import tkinter as tk
 import cv2
 from PIL import ImageTk, Image
+from square.client import Client
+from dotenv import load_dotenv
 
-LARGE_FONT= ("Verdana", 12)
+ID = load_dotenv("id")
+TOKEN = load_dotenv("token")
+client = Client(
+    access_token=TOKEN,
+    environment='sandbox'
+)
+
+
+LARGE_FONT = ("Verdana", 12)
+SMALL_FONT = ("Verdana", 8)
 
 class App(tk.Tk):
     def __init__(self, *args, **kwargs):
@@ -98,9 +109,46 @@ class CheckoutPage(tk.Frame):
         tk.Frame.__init__(self, parent)
         label = tk.Label(self, text="Please Enter Your Billing Information", font=LARGE_FONT)
         label.pack()
+
+        #initialize customer information
+        self.first_name, self.last_name, self.email = tk.StringVar(), tk.StringVar(), tk.StringVar()
+
+
+        # input customer information
+        # first name
+        first_text = tk.Label(self, text="First Name*", font=SMALL_FONT)
+        first_text.pack()
+        first_entry = tk.Entry(self, textvariable=self.first_name)
+        first_entry.pack()
+
+
+        # last name
+        last_text = tk.Label(self, text="Last Name*", font=SMALL_FONT)
+        last_text.pack()
+        last_entry = tk.Entry(self, textvariable=self.last_name)
+        last_entry.pack()
+
+        # email
+        email_text = tk.Label(self, text="Email*", font=SMALL_FONT)
+        email_text.pack()
+        email_entry = tk.Entry(self, textvariable=self.email)
+        email_entry.pack()
+
+        # buttons
+        # register
+        register = tk.Button(self, text="Register", width=12, height=2,
+                             command=self.save_info)
+        register.pack()
+
         button = tk.Button(self, text="Back", font=LARGE_FONT, width=12, height=2,
                            command= lambda: controller.show_frame("WelcomePage"))
         button.pack()
+    
+    def save_info(self):
+        first_name_info = self.first_name.get()
+        print("xxx333.received first name", first_name_info)
+        
+
 
 if __name__ == "__main__":
     app = App()
