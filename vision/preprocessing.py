@@ -11,8 +11,9 @@ class Preprocessing:
             image (cv2 image): image of the scan table
         """
         self.SIZE = (224,224)
-        self.image = skimage.transform.resize(image, (800, 1000),
+        self.image = skimage.transform.resize(image, (1000, 800),
                        anti_aliasing=True)
+        self.image = skimage.filters.gaussian(self.image)
         self.bboxes = [] #min_row, min_col, max_row, max_col
     def get_obj_img(self):
         """Return the close crop of each ofject on the scan table
@@ -24,11 +25,11 @@ class Preprocessing:
 
         h = img_hsv[:,:,0]
         s = img_hsv[:,:,1]
-        h_range = [0.15, 0.24]
+        h_range = [0.05, 0.13]
         s_range = [0.25, 0.5]
         mask = (((h<h_range[0]) | (h>h_range[1])) & ((s<s_range[0]) | (s>s_range[1])))
 
-        mask = skimage.filters.median(mask, np.ones((5,5)))
+        mask = skimage.filters.median(mask, np.ones((9,9)))
 
         mask = skimage.morphology.binary_dilation(mask, skimage.morphology.disk(10))
         mask = skimage.morphology.binary_opening(mask, skimage.morphology.disk(7))
@@ -40,9 +41,13 @@ class Preprocessing:
         labels = skimage.measure.label(mask)
         probs = skimage.measure.regionprops(labels)
 
+        print('----area filled---')
         for prob in probs:
+            
+            print(prob.area_filled)
+            if prob.area_filled < 15000: continue
             self.bboxes.append(prob.bbox)
-        
+        print('----')
         obj_img = []
         pil_img = Image.fromarray(np.uint8(self.image*255))
         for i, bbox in enumerate(self.bboxes):

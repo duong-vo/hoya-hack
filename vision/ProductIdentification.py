@@ -77,11 +77,11 @@ class SiameseNetwork(nn.Module):
         output2 = self.forward_once(input2)
         return output1, output2
 class InferenceModel:
-    def __init__(self, model, encode_database, prediction_threshold = 0.8):
+    def __init__(self, model, encode_database, idx2class):
         self.model = model
         self.model.eval()
-        self.prediction_threshold = prediction_threshold
         self.encode_database = encode_database
+        self.idx2class = idx2class
         self.classes = self.encode_database.keys()
     def inference(self, encode1, encode2):
         """Measure similarity between 2 images encoding
@@ -115,17 +115,20 @@ class InferenceModel:
         min_score = float('inf')
         best_fit_class = None
         for class_name in self.classes:
-            # print(f"Ref class: {class_name}")
-            total_score = 0
+            print(f"Ref class: {self.idx2class[class_name]}")
             for ref_encode in self.encode_database[class_name]:
-                total_score += self.inference(img_encode, ref_encode)
+                diff_score = self.inference(img_encode, ref_encode)
+                # Determine min
+                print(f'diff_score: {diff_score}')
+                if diff_score < min_score:
+                    min_score = diff_score
+                    best_fit_class = class_name
+            print(f'--min_score: {min_score}')
+            print('-------')
             #Determine min
-            avg_score = total_score / len(self.encode_database[class_name])
             # print(f'avg_score: {avg_score}')
             # print(f'min_score: {min_score}')
             # print('-------')
-            if avg_score < min_score:
-                min_score = avg_score
-                best_fit_class = class_name
+            
         
         return best_fit_class

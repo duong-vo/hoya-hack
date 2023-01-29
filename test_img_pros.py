@@ -17,7 +17,7 @@ def predict_item(img):
         Returns:
             List: list of items appeared on the scanning table
         """
-        model_path = 'weights/CNN_best_weight.pth.tar'
+        model_path = 'weights/siamese_best_weight.pth.tar'
         model = SiameseNetwork().to(DEVICE)
         checkpoint = torch.load(model_path) if DEVICE == 'cuda' else torch.load(model_path, map_location=torch.device('cpu'))
         model.load_state_dict(checkpoint['model state dict'])
@@ -54,15 +54,18 @@ def predict_item(img):
             cv2.waitKey(0)
         cv2.destroyAllWindows()
 
+        idx2class = {}
+        for class_name in class2idx_map:
+            idx2class[class2idx_map[class_name]] = class_name
         print("Inference")
-        inference_model = InferenceModel(model, encode_bucket)
+        inference_model = InferenceModel(model, encode_bucket, idx2class)
         predicted_product_list = []
         for i, obj_img in enumerate(obj_img_list):
             print(f"OBJ {i}")
             predicted_product_list.append(inference_model.product_matching(obj_img))
-        
+        print(idx2class)
         return predicted_product_list
 
-img = cv2.imread('test/test_2.jpg')
+img = cv2.imread('dataset/train/wine/IMG_7092.jpg')
 predicted_label = predict_item(img)
 print(predicted_label)

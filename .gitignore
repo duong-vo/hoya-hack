@@ -6,3 +6,4 @@ requirements.txt
 weights/
 *.db
 test/
+dataset/

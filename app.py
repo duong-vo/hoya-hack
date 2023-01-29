@@ -175,18 +175,16 @@ class CameraPage(tk.Frame):
         obj_img_list = preprocessing.get_obj_img()
         print(f'Found {len(obj_img_list)} objects on the table')
 
+        idx2class = {}
+        for class_name in class2idx_map:
+            idx2class[class2idx_map[class_name]] = class_name
         print("Inference")
-        inference_model = InferenceModel(model, encode_bucket)
+        inference_model = InferenceModel(model, encode_bucket, idx2class)
         predicted_product_list = []
         for i, obj_img in enumerate(obj_img_list):
-            # print(f"OBJ {i}")
             predicted_product_list.append(inference_model.product_matching(obj_img))
         
-        #create idx2class map
-        idx2class_map = {}
-        for key in class2idx_map:
-            idx2class_map[class2idx_map[key]] = key
-        predicted_product_list = [idx2class_map[idx] for idx in predicted_product_list]
+        predicted_product_list = [idx2class[idx] for idx in predicted_product_list]
         return predicted_product_list
 
 
