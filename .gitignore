@@ -4,3 +4,5 @@ test.py
 requirements.txt
 .env
 *.db
+test/
+weights/
