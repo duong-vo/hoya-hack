@@ -115,15 +115,15 @@ class InferenceModel:
         min_score = float('inf')
         best_fit_class = None
         for class_name in self.classes:
-            print(f"Ref class: {class_name}")
+            # print(f"Ref class: {class_name}")
             total_score = 0
             for ref_encode in self.encode_database[class_name]:
                 total_score += self.inference(img_encode, ref_encode)
             #Determine min
             avg_score = total_score / len(self.encode_database[class_name])
-            print(f'avg_score: {avg_score}')
-            print(f'min_score: {min_score}')
-            print('-------')
+            # print(f'avg_score: {avg_score}')
+            # print(f'min_score: {min_score}')
+            # print('-------')
             if avg_score < min_score:
                 min_score = avg_score
                 best_fit_class = class_name

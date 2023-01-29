@@ -17,7 +17,7 @@ def predict_item(img):
         Returns:
             List: list of items appeared on the scanning table
         """
-        model_path = 'weights/siamese_best_weight.pth.tar'
+        model_path = 'weights/CNN_best_weight.pth.tar'
         model = SiameseNetwork().to(DEVICE)
         checkpoint = torch.load(model_path) if DEVICE == 'cuda' else torch.load(model_path, map_location=torch.device('cpu'))
         model.load_state_dict(checkpoint['model state dict'])

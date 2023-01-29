@@ -34,9 +34,9 @@ class Preprocessing:
         mask = skimage.morphology.binary_opening(mask, skimage.morphology.disk(7))
         mask = skimage.morphology.binary_closing(mask, skimage.morphology.disk(7))
 
-        imshow("mask", np.uint8(mask)*255)
-        waitKey(0)
-        destroyAllWindows()
+        # imshow("mask", np.uint8(mask)*255)
+        # waitKey(0)
+        # destroyAllWindows()
         labels = skimage.measure.label(mask)
         probs = skimage.measure.regionprops(labels)
 

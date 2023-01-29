@@ -5,9 +5,13 @@ from square.client import Client
 from dotenv import load_dotenv
 import os
 import webbrowser
+
+import torch
 from vision.preprocessing import Preprocessing
 import vision.ProductIdentification
-from vision.ProductIdentification import ProductDatabase, InferenceModel
+from vision.ProductIdentification import ProductDatabase, InferenceModel, SiameseNetwork
+import numpy as np
+
 import sqlite3
 import db
 
@@ -24,6 +28,8 @@ SMALL_FONT = ("Verdana", 8)
 # Camera object
 CAMERA = cv2.VideoCapture(0)
 
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+predicted_item_list = []
 
 class App(tk.Tk):
     def __init__(self, *args, **kwargs):
@@ -73,6 +79,7 @@ class WelcomePage(tk.Frame):
 class CameraPage(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
+        self.controller = controller
         label = tk.Label(self, text="Please checkout", font=LARGE_FONT)
         label.pack()
         # back button
@@ -88,13 +95,13 @@ class CameraPage(tk.Frame):
 
 
         # add additional categories
-        side_camera_button = tk.Button(self, text="Submit Item", font=LARGE_FONT, width=12, height=2,
-                           command= lambda: controller.show_frame("SideCameraPage"))
+        side_camera_button = tk.Button(self, text="Add Item", font=LARGE_FONT, width=12, height=2,
+                           command=self.show_checkout_page)
         side_camera_button.pack()
 
         # button to take a picture
         capture_button = tk.Button(self, text="Capture", font=LARGE_FONT, width=12, height=2,
-                           command=self.capture_frame)
+                           command=self.show_checkout_page(controller))
         capture_button.pack()
          # integrating the camera inside the GUI
         self.video = tk.Label(self)
@@ -118,8 +125,14 @@ class CameraPage(tk.Frame):
     def capture_frame(self):
         _, frame = CAMERA.read()
         # cv2.imwrite("captured_frame.jpg", frame)
-        predicted_item_list = self.predict_item(img)
-        print(predicted_item_list)
+        self.predicted_item_list = self.predict_item(frame)
+        print("xxx1333.", predicted_item_list)
+
+    def show_checkout_page(self, controller):
+        self.capture_frame()
+        self.controller.frames["CheckoutPage"].update_item_list(self.predicted_item_list)
+        self.controller.show_frame("CheckoutPage")
+
     def predict_item(self, img):
         """List all the items appeared in the images
 
@@ -129,20 +142,51 @@ class CameraPage(tk.Frame):
         Returns:
             List: list of items appeared on the scanning table
         """
+        model_path = 'weights/siamese_best_weight.pth.tar'
+        model = SiameseNetwork().to(DEVICE)
+        checkpoint = torch.load(model_path) if DEVICE == 'cuda' else torch.load(model_path, map_location=torch.device('cpu'))
+        model.load_state_dict(checkpoint['model state dict'])
+        print("Done loading model")
+
+        print("Making database")
+        if not os.path.exists('product_database.pth'):
+            dataset_path = 'dataset/train/'
+            database = ProductDatabase(dataset_path, model)
+            encode_bucket = database.get_encode_bucket()
+            class2idx_map = database.get_class2idx_map()
+            class_list = database.get_class_list()
+
+            #Save to pth object
+            torch.save({'encoding': encode_bucket, 
+                        'class_list': class_list,
+                        'class2idx_map': class2idx_map,
+                        },
+                        "product_database.pth")
+        else:
+            database_info = torch.load('product_database.pth')
+            encode_bucket = database_info['encoding']
+            class2idx_map = database_info['class2idx_map']
+            class_list = database_info['class_list']
+
+        print(f'class2idx: {class2idx_map}')
+        print(f'Class list: {class_list}')
+        print("Preprocessing images")
         preprocessing = Preprocessing(img)
         obj_img_list = preprocessing.get_obj_img()
+        print(f'Found {len(obj_img_list)} objects on the table')
 
-        dataset_path = 'dataset'
-        database = ProductDatabase()
-        encode_bucket = database.get_encode_bucket()
-
-        model_path = 'weights/'
-        inference_model = inference_model('weights/', encode_bucket)
-
+        print("Inference")
+        inference_model = InferenceModel(model, encode_bucket)
         predicted_product_list = []
-        for obj_img in obj_img_list:
-            predicted_product_list.append(inference_model(img))
+        for i, obj_img in enumerate(obj_img_list):
+            # print(f"OBJ {i}")
+            predicted_product_list.append(inference_model.product_matching(obj_img))
         
+        #create idx2class map
+        idx2class_map = {}
+        for key in class2idx_map:
+            idx2class_map[class2idx_map[key]] = key
+        predicted_product_list = [idx2class_map[idx] for idx in predicted_product_list]
         return predicted_product_list
 
 
@@ -226,7 +270,13 @@ class CheckoutPage(tk.Frame):
         tk.Frame.__init__(self, parent)
         label = tk.Label(self, text="Please Enter Your Billing Information", font=LARGE_FONT)
         label.pack()
-
+        self.item_list = None
+        item_text = ""
+        print(predicted_item_list)
+        if predicted_item_list:
+            item_text = self.item_list[0]
+        item = tk.Label(self, text=item_text, font=LARGE_FONT)
+        item.pack()
         #initialize customer information
         self.first_name, self.last_name, self.email = tk.StringVar(), tk.StringVar(), tk.StringVar()
 
@@ -305,6 +355,9 @@ class CheckoutPage(tk.Frame):
         elif location_result.is_error():
             print("xxx402.result", location_result.errors)
 
+        def update_item_list(self, item_list):
+            print("xxx555.item_list for checkout", item_list)
+            self.item_list = item_list
 # Payment page
 # Will redirect to the Square Payment Page 
 class PaymentPage(tk.Frame):
