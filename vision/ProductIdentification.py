@@ -12,7 +12,9 @@ import PIL.ImageOps
 import torch.nn as nn
 from torch import optim
 import torch.nn.functional as F
-import torchvision.transforms.functional.to_tensor as to_tensor
+import torchvision.transforms.functional as TF
+
+from cv2 import imshow, waitKey, destroyAllWindows
 
 from collections import defaultdict
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -23,15 +25,25 @@ class ProductDatabase:
         # self.imageFolderDataset = imageFolderDataset
         # self.model = model
         imageFolderDataset = datasets.ImageFolder(root=dataset_path)
+        self.class2idx = imageFolderDataset.class_to_idx
+        self.class_list = imageFolderDataset.classes
         self.encode_bucket = defaultdict(list)
+        model.eval()
 
         for example in imageFolderDataset.imgs:
-            img, label = example[0], example[1]
-            encode = model.forward_once(img)
+            image, label = Image.open(example[0]), example[1]
+            image = TF.to_tensor(image)
+            image = image.to(DEVICE)
+            image = image[None, :]
+            encode = model.forward_once(image)
             self.encode_bucket[label].append(encode)
+
     def get_encode_bucket(self):
         return self.encode_bucket
-
+    def get_class2idx_map(self):
+        return self.class2idx
+    def get_class_list(self):
+        return self.class_list
 class SiameseNetwork(nn.Module):
     def __init__(self):
         super().__init__()
@@ -64,12 +76,9 @@ class SiameseNetwork(nn.Module):
         output1 = self.forward_once(input1)
         output2 = self.forward_once(input2)
         return output1, output2
-
 class InferenceModel:
-    def __init__(self, model_path, encode_database, prediction_threshold = 0.8):
-        self.model = SiameseNetwork().to(DEVICE)
-        checkpoint = torch.load(model_path) if DEVICE == 'cuda' else torch.load(model_path, map_location=torch.device('cpu'))
-        self.model.load_state_dict(checkpoint['model state dict'])
+    def __init__(self, model, encode_database, prediction_threshold = 0.8):
+        self.model = model
         self.model.eval()
         self.prediction_threshold = prediction_threshold
         self.encode_database = encode_database
@@ -98,19 +107,23 @@ class InferenceModel:
         Returns:
             string: name of best fit class
         """
-        image_tensor = to_tensor(image)
+        image_tensor = TF.to_tensor(image)
         image_tensor = image_tensor.to(DEVICE)
+        image_tensor = image_tensor[None, :]
         img_encode = self.model.forward_once(image_tensor)
 
         min_score = float('inf')
         best_fit_class = None
         for class_name in self.classes:
+            print(f"Ref class: {class_name}")
             total_score = 0
-            for ref_img in self.encode_database[class_name]:
-                ref_encode = self.model.forward_once(ref_img)
+            for ref_encode in self.encode_database[class_name]:
                 total_score += self.inference(img_encode, ref_encode)
             #Determine min
             avg_score = total_score / len(self.encode_database[class_name])
+            print(f'avg_score: {avg_score}')
+            print(f'min_score: {min_score}')
+            print('-------')
             if avg_score < min_score:
                 min_score = avg_score
                 best_fit_class = class_name

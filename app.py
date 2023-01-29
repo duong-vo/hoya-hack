@@ -117,9 +117,10 @@ class CameraPage(tk.Frame):
     
     def capture_frame(self):
         _, frame = CAMERA.read()
-        cv2.imwrite("captured_frame.jpg", frame)
-    
-    def predict_item(img):
+        # cv2.imwrite("captured_frame.jpg", frame)
+        predicted_item_list = self.predict_item(img)
+        print(predicted_item_list)
+    def predict_item(self, img):
         """List all the items appeared in the images
 
         Args:
