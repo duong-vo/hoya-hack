@@ -5,7 +5,6 @@ from square.client import Client
 from dotenv import load_dotenv
 import os
 import webbrowser
-import sqlite3
 import db
 
 
@@ -182,7 +181,7 @@ class SideCameraPage(tk.Frame):
         cursor.execute("INSERT INTO Items (item, price) VALUES (?, ?)",
                         (self.item, self.price))
         conn.commit()
-        
+
         cv2.imwrite("captured_frame.jpg", frame)
         conn.close()
     
