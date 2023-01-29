@@ -30,4 +30,5 @@ for item in items:
     cursor.execute("INSERT INTO Items (item, price) VALUES (?, ?)",
                     (item, price))
     conn.commit()
+
 conn.close()
