@@ -3,6 +3,9 @@
 test.py
 requirements.txt
 .env
+weights/
 *.db
 test/
-weights/
+dataset/
+*.pth
+bonus_dataset/
