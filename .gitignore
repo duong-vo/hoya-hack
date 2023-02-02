@@ -7,3 +7,5 @@ weights/
 *.db
 test/
 dataset/
+*.pth
+bonus_dataset/

@@ -25,8 +25,35 @@ print("xxx100", TOKEN)
 LARGE_FONT = ("Verdana", 12)
 SMALL_FONT = ("Verdana", 8)
 
+CATALOG = {'adidas_cap': 4,
+           'american_crew_hair_paste': 5,
+           'coconut_water': 4,
+           'oven_mitt': 9,
+           'pink_ukelele': 49,
+           'scissors': 5,
+           'spoon': 2,
+           'teddy_hamster': 9,
+           'water_bottle': 2,
+           'computer_mouse': 19,
+           'disinfecting_cleaner': 5,
+           'febreeze_spray': 8,
+           'fork': 2,
+           'keyboard': 99,
+           'knife': 9,
+           'ladle': 5,
+           'nutella': 5,
+           'omachi_mi_bap_bo': 1,
+           'omachi_sot_bo_ham': 2,
+           'phone': 599,
+           'shear_revival_clay_pomade': 29,
+           'skippy_peanut_butter': 4,
+           'sprite': 2,
+           'teddy_octopus': 4,
+           'watch': 2000,
+           'wine': 199}
+
 # Camera object
-CAMERA = cv2.VideoCapture(0)
+CAMERA = cv2.VideoCapture(1)
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 predicted_item_list = []
@@ -63,13 +90,15 @@ class App(tk.Tk):
         print("xxx222, show_frame", frame)
         frame.tkraise()
 
+    def get_frame(self, f_name):
+        return self.frames[f_name]
 
 # the welcome page
 class WelcomePage(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         # create the checkout button
-        label = tk.Label(self, text="Welcome!", font=LARGE_FONT)
+        label = tk.Label(self, text="\n\nWelcome!\n\n", font=LARGE_FONT)
         label.pack()
         button = tk.Button(self, text="Checkout", font=LARGE_FONT, width=12, height=2,
                            command= lambda: controller.show_frame("CameraPage"))
@@ -101,7 +130,7 @@ class CameraPage(tk.Frame):
 
         # button to take a picture
         capture_button = tk.Button(self, text="Capture", font=LARGE_FONT, width=12, height=2,
-                           command=self.show_checkout_page(controller))
+                           command=self.show_checkout_page)
         capture_button.pack()
          # integrating the camera inside the GUI
         self.video = tk.Label(self)
@@ -128,9 +157,10 @@ class CameraPage(tk.Frame):
         self.predicted_item_list = self.predict_item(frame)
         print("xxx1333.", predicted_item_list)
 
-    def show_checkout_page(self, controller):
+    def show_checkout_page(self):
         self.capture_frame()
-        self.controller.frames["CheckoutPage"].update_item_list(self.predicted_item_list)
+        print("xxx5552.item-list", self.predicted_item_list)
+        self.controller.frames["CheckoutPage"].update_list(self.predicted_item_list)
         self.controller.show_frame("CheckoutPage")
 
     def predict_item(self, img):
@@ -146,11 +176,13 @@ class CameraPage(tk.Frame):
         model = SiameseNetwork().to(DEVICE)
         checkpoint = torch.load(model_path) if DEVICE == 'cuda' else torch.load(model_path, map_location=torch.device('cpu'))
         model.load_state_dict(checkpoint['model state dict'])
+        
         print("Done loading model")
 
-        print("Making database")
         if not os.path.exists('product_database.pth'):
-            dataset_path = 'dataset/train/'
+            print("Making database")
+            dataset_path = 'dataset/'
+            model.eval()
             database = ProductDatabase(dataset_path, model)
             encode_bucket = database.get_encode_bucket()
             class2idx_map = database.get_class2idx_map()
@@ -168,22 +200,21 @@ class CameraPage(tk.Frame):
             class2idx_map = database_info['class2idx_map']
             class_list = database_info['class_list']
 
-        print(f'class2idx: {class2idx_map}')
-        print(f'Class list: {class_list}')
         print("Preprocessing images")
         preprocessing = Preprocessing(img)
         obj_img_list = preprocessing.get_obj_img()
-        print(f'Found {len(obj_img_list)} objects on the table')
+            
 
         idx2class = {}
         for class_name in class2idx_map:
             idx2class[class2idx_map[class_name]] = class_name
         print("Inference")
+        model.eval()
         inference_model = InferenceModel(model, encode_bucket, idx2class)
         predicted_product_list = []
         for i, obj_img in enumerate(obj_img_list):
             predicted_product_list.append(inference_model.product_matching(obj_img))
-        
+
         predicted_product_list = [idx2class[idx] for idx in predicted_product_list]
         return predicted_product_list
 
@@ -266,118 +297,65 @@ class SideCameraPage(tk.Frame):
 class CheckoutPage(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
-        label = tk.Label(self, text="Please Enter Your Billing Information", font=LARGE_FONT)
-        label.pack()
-        self.item_list = None
-        item_text = ""
-        print(predicted_item_list)
-        if predicted_item_list:
-            item_text = self.item_list[0]
-        item = tk.Label(self, text=item_text, font=LARGE_FONT)
-        item.pack()
+
+        self.item_list = []
         #initialize customer information
         self.first_name, self.last_name, self.email = tk.StringVar(), tk.StringVar(), tk.StringVar()
+        self.controller = controller
 
+    def update_list(self, item_list):
+        print("xxx555.item_list for checkout", item_list)
+        # label
+        label = tk.Label(self, text="\n\nHere are your items", font=LARGE_FONT)
+        label.pack()
+        
+        # item lists
+        self.item_list = item_list
+        self.sum = 0
+        item_text = ""
+        if self.item_list:
+            for item in self.item_list:
+                price = CATALOG[item]
+                item_text += item + ": $" + str(price) + "\n"
+                self.sum += price
 
-        # input customer information
-        # first name
-        first_text = tk.Label(self, text="First Name*", font=SMALL_FONT)
-        first_text.pack()
-        first_entry = tk.Entry(self, textvariable=self.first_name)
-        first_entry.pack()
+        item_label = tk.Label(self, text=item_text, font=LARGE_FONT)
+        item_label.pack()
+        price_label = tk.Label(self, text="Your total is $" + str(self.sum) + "\n", font=LARGE_FONT)
+        price_label.pack()
 
-
-        # last name
-        last_text = tk.Label(self, text="Last Name*", font=SMALL_FONT)
-        last_text.pack()
-        last_entry = tk.Entry(self, textvariable=self.last_name)
-        last_entry.pack()
-
-        # email
-        email_text = tk.Label(self, text="Email*", font=SMALL_FONT)
-        email_text.pack()
-        email_entry = tk.Entry(self, textvariable=self.email)
-        email_entry.pack()
-
-        # buttons
-        # register
-        register = tk.Button(self, text="Register", width=12, height=2,
-                             command=self.save_customer_info)
-        register.pack()
-
-        # go back
-        button = tk.Button(self, text="Back", font=LARGE_FONT, width=12, height=2,
-                           command= lambda: controller.show_frame("WelcomePage"))
-        button.pack()
-
-        checkout = tk.Button(self, text="Continue To Checkout", font=LARGE_FONT, width=16, height=2,
-                             command= lambda: controller.show_frame("PaymentPage"))
+        checkout = tk.Button(self, text="Continue To Payment", font=LARGE_FONT, width=20, height=2,
+                             command=self.show_next_frame)
         checkout.pack()
-
-    # input the user info to register customer
-    def save_customer_info(self):
-        first_name_info = self.first_name.get()
-        print("xxx333.received first name", first_name_info)
-        last_name_info = self.last_name.get()
-        print("xxx334.received last name", last_name_info)
-        email_info = self.email.get()
-        print("xxx335.received email", email_info)
-        self.create_customer(first_name_info, last_name_info, email_info)
     
-    # create customer through square api
-    def create_customer(self, first, last, email):
-        # make a post request to the API
-        customer_result = client.customers.create_customer(
-            body = {
-                "given_name": first,
-                "family_name": last,
-                "email_address": email
-            }
-        )
+    def show_next_frame(self):
+        self.controller.frames["PaymentPage"].update_payment(self.item_list, self.sum)
+        self.controller.show_frame("PaymentPage")
 
-        if customer_result.is_success():
-            print("xxx200.result", customer_result.body)
-            # get customer_id to create payment
-            customer_id = customer_result.body['customer']['id']
-            print("xxx300.customer_id", customer_id)
-        elif customer_result.is_error():
-            print("xxx400.result", customer_result.errors)
 
-        # get the location object to get the locationId
-        location_result = client.locations.list_locations()
-        if location_result.is_success():
-            print("xxx202.result", location_result.body)
-            # get location id to create payment
-            location_id  = location_result.body['locations'][0]['id']
-            print("xxx301.location_id", location_id)
-        elif location_result.is_error():
-            print("xxx402.result", location_result.errors)
-
-        def update_item_list(self, item_list):
-            print("xxx555.item_list for checkout", item_list)
-            self.item_list = item_list
 # Payment page
 # Will redirect to the Square Payment Page 
 class PaymentPage(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
+
+    def update_payment(self, item_list, sum):
         label = tk.Label(self, text="Please Enter follow the link to checkout", font=LARGE_FONT)
         label.pack()
-
-        # hardcode checkout
+        self.item_list = item_list
+        self.sum = sum
         result = client.checkout.create_payment_link(
                     body = {
                         "quick_pay": {
-                        "name": "Ladle",
+                        "name": "Your Items",
                         "price_money": {
-                            "amount": 20,
+                            "amount": sum * 100, # since the Square API is in cents
                             "currency": "USD"
                         },
                         "location_id": "LVT2MPPHNKY2X"
                         }
                     }
                 )
-        # create the url to redirect to the checkout page
         url = ""
         if result.is_success():
             print(result.body)
@@ -389,7 +367,8 @@ class PaymentPage(tk.Frame):
         link.pack()
         link.bind("<Button-1>", lambda e:
                   self.redirect(url))
-        
+
+
     def redirect(self, url):
         webbrowser.open_new_tab(url)
 

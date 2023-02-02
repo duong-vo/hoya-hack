@@ -22,8 +22,6 @@ DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 dataset_path = 'dataset/'
 class ProductDatabase:
     def __init__(self, dataset_path, model):
-        # self.imageFolderDataset = imageFolderDataset
-        # self.model = model
         imageFolderDataset = datasets.ImageFolder(root=dataset_path)
         self.class2idx = imageFolderDataset.class_to_idx
         self.class_list = imageFolderDataset.classes
@@ -32,6 +30,7 @@ class ProductDatabase:
 
         for example in imageFolderDataset.imgs:
             image, label = Image.open(example[0]), example[1]
+            image = image.resize((224,224))
             image = TF.to_tensor(image)
             image = image.to(DEVICE)
             image = image[None, :]
@@ -61,7 +60,7 @@ class SiameseNetwork(nn.Module):
             nn.Linear(500, 500),
             nn.ReLU(inplace=True),
 
-            nn.Linear(500, 5)
+            nn.Linear(500, 50)
         )
         
         for p in self.feature_extractor.parameters():
@@ -72,14 +71,15 @@ class SiameseNetwork(nn.Module):
         output = self.final_block(output)
         return output
 
-    def forward(self, input1, input2):
+    def forward(self, input1, input2, input3):
         output1 = self.forward_once(input1)
         output2 = self.forward_once(input2)
-        return output1, output2
+        output3 = self.forward_once(input3)
+        return output1, output2, output3
 class InferenceModel:
     def __init__(self, model, encode_database, idx2class):
         self.model = model
-        self.model.eval()
+        
         self.encode_database = encode_database
         self.idx2class = idx2class
         self.classes = self.encode_database.keys()
@@ -94,7 +94,7 @@ class InferenceModel:
             float: dissimilarity score, the lower the more similar
         """
         with torch.no_grad():
-            euclidean_distance = F.pairwise_distance(encode1, encode2, keepdim = True)
+            euclidean_distance = (encode1 - encode2).pow(2).sum(1)
         
         return euclidean_distance
 
@@ -111,24 +111,19 @@ class InferenceModel:
         image_tensor = image_tensor.to(DEVICE)
         image_tensor = image_tensor[None, :]
         img_encode = self.model.forward_once(image_tensor)
+        
 
         min_score = float('inf')
         best_fit_class = None
         for class_name in self.classes:
-            print(f"Ref class: {self.idx2class[class_name]}")
+            total_score = 0.0
             for ref_encode in self.encode_database[class_name]:
-                diff_score = self.inference(img_encode, ref_encode)
-                # Determine min
-                print(f'diff_score: {diff_score}')
-                if diff_score < min_score:
-                    min_score = diff_score
-                    best_fit_class = class_name
-            print(f'--min_score: {min_score}')
-            print('-------')
+                diff_score = self.inference(ref_encode, img_encode)
+                total_score+=diff_score
+            avg_score = total_score / len(self.encode_database[class_name])
             #Determine min
-            # print(f'avg_score: {avg_score}')
-            # print(f'min_score: {min_score}')
-            # print('-------')
-            
-        
+            if avg_score < min_score:
+                min_score = diff_score
+                best_fit_class = class_name
+
         return best_fit_class
