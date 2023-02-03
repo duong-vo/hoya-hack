@@ -1,4 +1,5 @@
 [![IMAGE ALT TEXT](https://github.com/duong-vo/hoya-hack/blob/main/banner.png)](https://youtu.be/t6kov8xUKNU "Self-checkout Kiosk App with Camera for Retails")
+<a href="https://youtu.be/t6kov8xUKNU"><img src="https://github.com/duong-vo/hoya-hack/blob/main/banner.png" style="width:300px;height:300px;"></a>
 # Inspiration
 We already have self-checkout with barcodes at most places in the college. However, I believe that we can save so much more time with the checkout process than that, which is using computer vision for checking out.
 
