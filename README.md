@@ -14,4 +14,5 @@ Version control is also a challenge for us. Branching and merging conflict cause
 # What we learned
 In the end, version control is the most we learned from this hackathon. We learn a lot about merging branches and resolving conflicts in GitHub. We hope that with this knowledge of version control, we will be more efficient with working on projects in later hackathons as well as in our later careers.
 
-#Techstack: PyTorch, OpenCV, scikit-learn, Tkinter, SQLite, Square API.
+# Techstack: 
+PyTorch, OpenCV, scikit-learn, Tkinter, SQLite, Square API.
